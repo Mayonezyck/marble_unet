@@ -21,4 +21,4 @@
    IOU_value = count/union;
    result_IOU = [result_IOU,IOU_value];
  end
- writematrix(result_IOU,'/home/zyck/Downloads/unet-test/unet-master/result.xlsx','Sheet',1,'Range','H6')
+ writematrix(result_IOU,'/home/zyck/Downloads/unet-test/unet-master/result.xlsx','Sheet',1,'Range','H13')

@@ -1,16 +1,12 @@
 from __future__ import print_function
 from keras.preprocessing.image import ImageDataGenerator
-import numpy as np
+import numpy as np 
 import os
 import glob
 import skimage
-import math
 from skimage.util import img_as_ubyte
-import random
 import skimage.io as io
 import skimage.transform as trans
-import shutil
-from natsort import natsorted
 
 Sky = [128,128,128]
 Building = [128,0,0]
@@ -31,7 +27,7 @@ COLOR_DICT = np.array([Sky, Building, Pole, Road, Pavement,
 
 def adjustData(img,mask,flag_multi_class,num_class):
     if(flag_multi_class):
-        img = img / 255
+        img = img / 255 
         mask = mask[:,:,:,0] if(len(mask.shape) == 4) else mask[:,:,0]
         new_mask = np.zeros(mask.shape + (num_class,))
         for i in range(num_class):
@@ -51,9 +47,9 @@ def adjustData(img,mask,flag_multi_class,num_class):
 
 
 
-def trainGenerator(batch_size,train_path,image_folder,mask_folder,save_to_dir,aug_dict,image_color_mode = "rgb",
+def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image_color_mode = "rgb",
                     mask_color_mode = "grayscale",image_save_prefix  = "image",mask_save_prefix  = "mask",
-                    flag_multi_class = False,num_class = 2,target_size = (256,256),seed = 0):
+                    flag_multi_class = False,num_class = 2,save_to_dir = None,target_size = (256,256),seed = 0):
     '''
     can generate image and mask at the same time
     use the same seed for image_datagen and mask_datagen to ensure the transformation for image and mask is the same
@@ -88,7 +84,7 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,save_to_dir,au
 
 
 
-def testGenerator(test_path,num_image,target_size = (256,256),flag_multi_class = False,as_gray = False):
+def testGenerator(test_path,num_image = 30,target_size = (256,256),flag_multi_class = False,as_gray = False):
     for i in range(num_image):
         img = io.imread(os.path.join(test_path,"%d.tif"%i),as_gray = as_gray)
         #img = img / 255
@@ -97,7 +93,7 @@ def testGenerator(test_path,num_image,target_size = (256,256),flag_multi_class =
         img = np.reshape(img,(1,)+img.shape)
         yield img
 
-def resultGenerator(test_path, num_image = 30, target_size = (256,256), flag_multi_class = False, as_gray = False):
+def resultGenerator(test_path, num_image = 526, target_size = (256,256), flag_multi_class = False, as_gray = False):
     for i in range(num_image):
         img = io.imread(os.path.join(test_path,"%d.tif"%i),as_gray = as_gray)
         #img = img / 255
@@ -132,82 +128,8 @@ def labelVisualize(num_class,color_dict,img):
     return img_out / 255
 
 
-def kfolderGenerator(k_value,image_path,label_path):
-    count = 0
-    count2 = 0
-    wkdir = ''
-    # Iterate directory
-    for path in os.listdir(image_path):
-        # check if current path is a file
-        if os.path.isfile(os.path.join(image_path, path)):
-            count += 1
-    for path in os.listdir(label_path):
-    	if os.path.isfile(os.path.join(label_path, path)):
-    	    count2 += 1
-    print('The image folder has:', count)
-    print('The label folder has:', count2)
-    if count == count2:
-        item_n = math.floor(count/k_value)
-        os.mkdir('Kfolder')
-        wkdir = os.path.join(wkdir,'Kfolder')
-        print('Temporary folder: Kfolder created')
-        imagelis = os.listdir(image_path)
-        for i in range(k_value):
-            os.mkdir(os.path.join(wkdir,str(i)))
-            temp_dir = os.path.join(wkdir,str(i))
-            train_dir = os.path.join(temp_dir,'train')
-            test_dir = os.path.join(temp_dir,'test')
-            os.mkdir(train_dir)
-            os.mkdir(test_dir)
-            os.mkdir(os.path.join(test_dir,'correctans'))
-            os.mkdir(os.path.join(train_dir,'image'))
-            os.mkdir(os.path.join(train_dir,'labels'))
-            os.mkdir(os.path.join(train_dir,'aug'))
-            if i == k_value-1:
-            	list_piece = imagelis[i*item_n:]
-            else:
-            	list_piece = imagelis[i*item_n:i*item_n+item_n]
-            diff = set(imagelis).difference(set(list_piece))
-            for item in list_piece:
-                shutil.copy(os.path.join(image_path,item),test_dir)
-                shutil.copy(os.path.join(label_path,item),os.path.join(test_dir,'correctans'))
-            for count, filename in enumerate(natsorted(os.listdir(test_dir))):
-                if filename != 'correctans':
-                    dst = f"{count}{'.tif'}"
-                    src1 =f"{test_dir}/{filename}"
-                    src2 =f"{test_dir}/{'correctans'}/{filename}"
-                    dst1 =f"{test_dir}/{dst}"
-                    dst2 =f"{test_dir}/{'correctans'}/{dst}"
-                    os.rename(src1, dst1)
-                    os.rename(src2, dst2)
-            for item in diff:
-            	shutil.copy(os.path.join(image_path,item),os.path.join(train_dir,'image'))
-            	shutil.copy(os.path.join(label_path,item),os.path.join(train_dir,'labels'))
-            for count, filename in enumerate(natsorted(os.listdir(os.path.join(train_dir,'labels')))):
-                if filename != 'correctans':
-                    dst = f"{count}{'.tif'}"
-                    src1 =f"{train_dir}/{'image'}/{filename}"
-                    src2 =f"{train_dir}/{'labels'}/{filename}"
-                    dst1 =f"{train_dir}/{'image'}/{dst}"
-                    dst2 =f"{train_dir}/{'labels'}/{dst}"
-                    os.rename(src1, dst1)
-                    os.rename(src2, dst2)
-        os.mkdir(os.path.join(wkdir,'total'))
-        os.mkdir(os.path.join(wkdir,'total','ans'))
-        os.mkdir(os.path.join(wkdir,'total','image'))
-        os.mkdir(os.path.join(wkdir,'total','labels'))
-        #print(sample)
-    else:
-        print('Unmatched number of files.')
 
-
-def saveResult(current_kfold,save_path,npyfile,flag_multi_class = False,num_class = 2):
-    wkpath = os.path.join('Kfolder',str(current_kfold))
+def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
     for i,item in enumerate(npyfile):
         img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]
         io.imsave(os.path.join(save_path,"%d_predict.png"%i),img)
-    for item in os.listdir(os.path.join(wkpath,'test')):
-        if item != 'correctans':
-            shutil.copy(os.path.join(wkpath,'test',item),os.path.join('Kfolder','total',str(current_kfold)+'_'+item))
-            if item[-4:] == '.tif':
-                shutil.copy(os.path.join(wkpath,'test','correctans',item),os.path.join('Kfolder','total','ans',str(current_kfold)+'_'+item))
